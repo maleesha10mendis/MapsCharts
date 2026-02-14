@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Australian Energy Dashboard</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBB3Jo7fvf17mRW7ta91gFWK50Kd50SM6E&callback=initMap" async defer></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #fafafa; }
+        h1 { color: #333; text-align: left; }
+        
+        /* Tab Styles */
+        .tab-container { border-bottom: 2px solid #ccc; margin-bottom: 20px; display: flex; gap: 5px; }
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            background: #eee;
+            border-radius: 5px 5px 0 0;
+            font-size: 16px;
+        }
+        .tab-button.active { background: #fff; border-bottom: 2px solid #fff; margin-bottom: -2px; font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Map & Chart Styles */
+        #map { height: 600px; width: 100%; }
+        #regions_div { margin: 5px auto; border: 2px solid #e0e0e0; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        
+        /* Legend and Table styles preserved from your code */
+        .legend-container { width: 1200px; margin: 10px auto; text-align: center; }
+        .legend-title { font-size: 14px; font-weight: bold; color: #424242; margin-bottom: 8px; }
+        .legend-gradient { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 5px; }
+        .gradient-bar { width: 400px; height: 25px; background: linear-gradient(to right, #e3f2fd, #42a5f5, #1976d2, #0d47a1); border: 1px solid #424242; border-radius: 3px; }
+        .legend-labels { display: flex; justify-content: space-between; width: 400px; margin: 0 auto; font-size: 12px; color: #424242; }
+        .info-box { max-width: 1200px; margin: 20px auto; padding: 20px; background-color: white; border-left: 5px solid #1976d2; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        th { background-color: #1976d2; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="tab-container">
+        <div class="tab-button active" onclick="openTab(event, 'tab-map')">Power Stations Map</div>
+        <div class="tab-button" onclick="openTab(event, 'tab-chart')">Energy Consumption Chart</div>
+    </div>
+
+    <div id="tab-map" class="tab-content active">
+        <h1>Australian Coal and Gas Power Stations</h1>
+        <div id="map"></div>
+    </div>
+
+    <div id="tab-chart" class="tab-content">
+        <h1 style="color: #0d47a1; text-align: center;">Australian Energy Consumption by State/Territory</h1>
+        <h2 style="color: #1976d2; text-align: center; font-weight: normal;">Data Year: 2023-24</h2>
+        
+        <div class="legend-container">
+            <div class="legend-title">Total Energy Consumption (Petajoules)</div>
+            <div class="legend-gradient">
+                <span style="font-size: 12px; color: #424242;">Low</span>
+                <div class="gradient-bar"></div>
+                <span style="font-size: 12px; color: #424242;">High</span>
+            </div>
+            <div class="legend-labels">
+                <span>100 PJ</span><span>500 PJ</span><span>1,000 PJ</span><span>1,500 PJ</span>
+            </div>
+        </div>
+        
+        <div id="regions_div" style="width: 1200px; height: 850px;"></div>
+        
+        <div class="info-box">
+            <h3>Summary Statistics</h3>
+            <table>
+                <tr><th>State/Territory</th><th>Population</th><th>Per Capita (GJ)</th><th>Total Energy (PJ)</th><th>National Share</th></tr>
+                <tr><td>Queensland</td><td>5,674,834</td><td>261</td><td>1,481</td><td>24.7%</td></tr>
+                <tr><td>New South Wales</td><td>8,593,871</td><td>162</td><td>1,392</td><td>23.2%</td></tr>
+                <tr><td>Western Australia</td><td>3,043,731</td><td>437</td><td>1,330</td><td>22.1%</td></tr>
+                <tr><td>Victoria</td><td>7,074,468</td><td>178</td><td>1,259</td><td>21.0%</td></tr>
+                <tr><td>South Australia</td><td>1,902,331</td><td>155</td><td>295</td><td>4.9%</td></tr>
+                <tr><td>Northern Territory</td><td>264,411</td><td>546</td><td>144</td><td>2.4%</td></tr>
+                <tr><td>Tasmania</td><td>575,960</td><td>182</td><td>105</td><td>1.7%</td></tr>
+                <tr><th>TOTAL</th><th>27,129,606</th><th>-</th><th>6,007 PJ</th><th>100%</th></tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching logic
+        function openTab(evt, tabId) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
+            tablinks = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tablinks.length; i++) { tablinks[i].classList.remove("active"); }
+            document.getElementById(tabId).style.display = "block";
+            evt.currentTarget.classList.add("active");
+
+            // Redraw GeoChart when tab becomes visible
+            if (tabId === 'tab-chart') { drawRegionsMap(); }
+        }
+
+        // --- MAP CODE (Original Markers Restored) ---
+        function initMap() {
+            var australia = {lat: -25.2744, lng: 133.7751};
+            var map = new google.maps.Map(document.getElementById('map'), { zoom: 5, center: australia });
+
+            var powerStations = [
+                {name: "Bayswater Power Station", type: "Coal", state: "NSW", lat: -32.3678, lng: 150.9813},
+                {name: "Eraring Power Station", type: "Coal", state: "NSW", lat: -32.9934, lng: 151.4513},
+                {name: "Liddell Power Station", type: "Coal", state: "NSW", lat: -32.3768, lng: 150.9755},
+                {name: "Vales Point Power Station", type: "Coal", state: "NSW", lat: -33.1695, lng: 151.5418},
+                {name: "Mount Piper Power Station", type: "Coal", state: "NSW", lat: -33.3581, lng: 150.0136},
+                {name: "Loy Yang A Power Station", type: "Coal", state: "VIC", lat: -38.2542, lng: 146.5792},
+                {name: "Loy Yang B Power Station", type: "Coal", state: "VIC", lat: -38.2581, lng: 146.5812},
+                {name: "Yallourn Power Station", type: "Coal", state: "VIC", lat: -38.1787, lng: 146.2928},
+                {name: "Gladstone Power Station", type: "Coal", state: "QLD", lat: -23.8396, lng: 151.2351},
+                {name: "Tarong Power Station", type: "Coal", state: "QLD", lat: -26.8319, lng: 151.9335},
+                {name: "Stanwell Power Station", type: "Coal", state: "QLD", lat: -23.6004, lng: 150.4546},
+                {name: "Kogan Creek Power Station", type: "Coal", state: "QLD", lat: -26.9248, lng: 150.7414},
+                {name: "Callide Power Station", type: "Coal", state: "QLD", lat: -24.3137, lng: 150.5529},
+                {name: "AGL Torrens Island Power Station", type: "Gas", state: "SA", lat: -34.7913, lng: 138.5186},
+                {name: "Pelican Point Power Station", type: "Gas", state: "SA", lat: -34.7858, lng: 138.5169},
+                {name: "Darling Downs Power Station", type: "Gas", state: "QLD", lat: -27.3412, lng: 150.6259},
+                {name: "Mortlake Power Station", type: "Gas", state: "VIC", lat: -38.0592, lng: 142.8429},
+                {name: "Tallawarra Power Station", type: "Gas", state: "NSW", lat: -34.5484, lng: 150.8294},
+                {name: "Braemar Power Station", type: "Gas", state: "QLD", lat: -27.2881, lng: 151.1981},
+                {name: "Oakey Power Station", type: "Gas", state: "QLD", lat: -27.3992, lng: 151.7195}
+            ];
+
+            powerStations.forEach(function(station) {
+                var marker = new google.maps.Marker({
+                    position: {lat: station.lat, lng: station.lng},
+                    map: map,
+                    title: station.name,
+                    icon: { url: station.type === "Coal" ? "http://maps.google.com/mapfiles/ms/icons/red-dot.png" : "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" }
+                });
+
+                var infowindow = new google.maps.InfoWindow({
+                    content: '<div style="padding:10px;"><strong>' + station.name + '</strong><br>Type: ' + station.type + '<br>State: ' + station.state + '</div>'
+                });
+                marker.addListener('click', function() { infowindow.open(map, marker); });
+            });
+
+            // Add original legend
+            var legend = document.createElement('div');
+            legend.style.cssText = 'background:white; border:2px solid #ccc; padding:10px; margin:10px;';
+            legend.innerHTML = '<h3 style="margin-top:0;">Legend</h3>' +
+                             '<p><img src="http://maps.google.com/mapfiles/ms/icons/red-dot.png" style="vertical-align:middle;"> Coal Power Station</p>' +
+                             '<p><img src="http://maps.google.com/mapfiles/ms/icons/blue-dot.png" style="vertical-align:middle;"> Gas Power Station</p>';
+            map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
+        }
+
+        // --- GEOCHART CODE ---
+        google.charts.load('current', { 'packages':['geochart'] });
+        google.charts.setOnLoadCallback(drawRegionsMap);
+
+        function drawRegionsMap() {
+            var data = google.visualization.arrayToDataTable([
+                ['State/Territory', 'Total Energy (PJ)', 'National Share (%)'],
+                ['New South Wales', 1392, 23], ['Victoria', 1259, 21], ['Queensland', 1481, 25],
+                ['Western Australia', 1330, 22], ['South Australia', 295, 5], ['Tasmania', 105, 2], ['Northern Territory', 144, 2]
+            ]);
+          
+            var options = {
+                region: 'AU', displayMode: 'regions', resolution: 'provinces',
+                colorAxis: { colors: ['#e3f2fd', '#42a5f5', '#1976d2', '#0d47a1'], minValue: 100, maxValue: 1500 },
+                backgroundColor: '#ffffff', datalessRegionColor: '#f5f5f5', defaultColor: '#f5f5f5',
+                tooltip: {textStyle: {fontSize: 14}}, legend: 'none'
+            };
+        
+            var chart = new google.visualization.GeoChart(document.getElementById('regions_div'));
+            chart.draw(data, options);
+        }
+    </script>
+</body>
+</html>
